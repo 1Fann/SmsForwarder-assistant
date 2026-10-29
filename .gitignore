@@ -1,0 +1,6 @@
+.work/
+app/build/
+app/out/
+*.keystore
+*.apk
+*.db
