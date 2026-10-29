@@ -1,5 +1,7 @@
 # 短信推送助手 / SmsForwarder Assistant · Bark-Android
 
+**中文** | [English](README.en.md) · [v1.3 Release](https://github.com/1Fann/SmsForwarder-assistant/releases/tag/v1.3) · [MIT](LICENSE)
+
 **安卓 Bark 服务端与短信推送助手。** 支持将 Bark 服务端部署在 ARM64 安卓手机上，既可以独立用作 Bark 推送服务器，也可以配合 [SmsForwarder](https://github.com/pppscn/SmsForwarder)，把安卓收到的短信推送到 iPhone。当前版本 **1.3**，原名“Bark 本机服务器”。
 
 **只想在安卓手机上自建 Bark 服务端，也可以使用本项目，无需安装或启用短信转发器。** 短信转发是可选用途，不是运行 Bark 服务的前提。

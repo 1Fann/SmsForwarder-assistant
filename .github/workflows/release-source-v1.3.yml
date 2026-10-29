@@ -29,7 +29,7 @@ jobs:
           set -euo pipefail
           gh api "repos/$GITHUB_REPOSITORY/contents/docs/releases/v1.3.md?ref=$GITHUB_SHA" --jq .content | base64 --decode > "$RUNNER_TEMP/release-notes.md"
           if gh release view v1.3 --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            echo 'Release v1.3 already exists; leaving it unchanged.'
+            gh release edit v1.3 --repo "$GITHUB_REPOSITORY" --title '短信推送助手 / SmsForwarder Assistant · Bark-Android v1.3（源码 / Source）' --notes-file "$RUNNER_TEMP/release-notes.md"
           else
-            gh release create v1.3 --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title '短信推送助手 · Bark-Android v1.3（源码版）' --notes-file "$RUNNER_TEMP/release-notes.md" --latest
+            gh release create v1.3 --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title '短信推送助手 / SmsForwarder Assistant · Bark-Android v1.3（源码 / Source）' --notes-file "$RUNNER_TEMP/release-notes.md" --latest
           fi
