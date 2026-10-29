@@ -1,0 +1,35 @@
+name: Publish v1.3 source release
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/release-source-v1.3.yml'
+      - 'docs/releases/v1.3.md'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-source-v1.3
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: github.repository == '1Fann/SmsForwarder-assistant'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Publish release notes without binary assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh api "repos/$GITHUB_REPOSITORY/contents/docs/releases/v1.3.md?ref=$GITHUB_SHA" --jq .content | base64 --decode > "$RUNNER_TEMP/release-notes.md"
+          if gh release view v1.3 --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo 'Release v1.3 already exists; leaving it unchanged.'
+          else
+            gh release create v1.3 --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title '短信推送助手 · Bark-Android v1.3（源码版）' --notes-file "$RUNNER_TEMP/release-notes.md" --latest
+          fi

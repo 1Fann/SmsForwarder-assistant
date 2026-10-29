@@ -1,13 +1,23 @@
-# 短信推送助手 / SmsForwarder Assistant
+# 短信推送助手 / SmsForwarder Assistant · Bark-Android
 
-在已 Root 的 ARM64 安卓手机上部署本机 Bark 服务，并帮助配置 [SmsForwarder](https://github.com/pppscn/SmsForwarder)，将短信通知推送到 iPhone。当前版本 **1.3**，原名“Bark 本机服务器”。
+**安卓 Bark 服务端与短信推送助手。** 支持将 Bark 服务端部署在 ARM64 安卓手机上，既可以独立用作 Bark 推送服务器，也可以配合 [SmsForwarder](https://github.com/pppscn/SmsForwarder)，把安卓收到的短信推送到 iPhone。当前版本 **1.3**，原名“Bark 本机服务器”。
+
+**只想在安卓手机上自建 Bark 服务端，也可以使用本项目，无需安装或启用短信转发器。** 短信转发是可选用途，不是运行 Bark 服务的前提。
+
+| 你的需求 | 使用方式 |
+| --- | --- |
+| 在安卓手机上部署 Bark 服务端 | 启动本机 Bark、配对 iPhone，为可访问该服务的应用或脚本提供推送接口 |
+| 将安卓短信推送到 iPhone | 在本机 Bark 基础上启用 SmsForwarder，配置短信规则、权限修复与失败重试 |
+
+[查看 v1.3 发布说明](https://github.com/1Fann/SmsForwarder-assistant/releases/tag/v1.3) · 本次发布提供源码，不附带 APK。
 
 本项目是独立的社区助手，不是 SmsForwarder 或 Bark 官方客户端。助手代码采用 [MIT](LICENSE)，第三方组件保留原许可证，见 [NOTICE.md](NOTICE.md)。
 
 ## 功能
 
-- 内置经 SHA-256 校验的官方 SmsForwarder 3.5.0 ARM64 安装包。
-- 本机运行 Bark 服务，iPhone 配对信息由当前设备生成，无预置域名、固定 IP 或密钥。
+- 在安卓手机上独立运行 Bark 服务端，支持启动、停止、查看配对地址和发送测试提醒。
+- iPhone 配对信息由当前设备生成，无预置个人域名、固定 IP 或手机配对密钥。
+- 编译后的 APK 内置经 SHA-256 校验的官方 SmsForwarder 3.5.0 ARM64 安装包，是否安装和启用短信转发由使用者决定。
 - 一键创建/更新当前 iPhone 的发送通道、全部 SIM 的短信规则，并配置失败重试。
 - 检查与修复短信接收、读取、小米通知类短信、自启动和后台运行权限。
 - 独立 Root 检测任务：完整检查间隔 1–1440 分钟（默认 5），约每 10 秒检查两个后台服务是否退出，支持立即检查与上次结果。
@@ -16,7 +26,20 @@
 
 ## 首次使用
 
-需要 Android 8.0+、ARM64、Root、iPhone Bark。自动配置当前只适配 SmsForwarder 3.5.0 数据库版本 21；实测环境为 Android 13 / Redmi / Magisk。其它 Root 管理器与 ROM 仍需验证。
+需要 Android 8.0+、ARM64 和 iPhone Bark。短信自动配置、权限修复与独立定时守护需要 Root。单独启动 Bark 的代码不调用 Root，但非 Root 设备尚未实机验证。实测环境为 Android 13 / Redmi / Magisk，其它 Root 管理器与 ROM 仍需验证。
+
+### 用途一：只在安卓上运行 Bark 服务端
+
+1. 打开助手，在首页点击“启动服务”。无需进入短信配置，也无需安装短信转发器。
+2. 点击“刷新状态 / 配对地址”。首次配对时让安卓和 iPhone 连接同一 Wi-Fi，在 iPhone Bark 的服务器设置中添加显示的局域网地址。
+3. 配对后点击“发送测试提醒”，确认 iPhone 收到通知。
+4. 允许助手后台持续运行。其它应用或脚本可通过可访问的 Bark 接口发送通知；安卓本机调用使用 `127.0.0.1`，其它设备调用需要能访问安卓的实际地址。
+
+安卓需持续联网并保持 Bark 服务运行。iPhone 接收通知经 Apple APNs，不必一直与安卓处于同一 Wi-Fi；调用 Bark 接口的设备仍需能访问该接口。已 Root 的设备也可按需开启独立定时监测；未安装短信转发器时，监测结果可能提示“短信转发器未初始化”，不影响 Bark 服务自身的检测与恢复。
+
+### 用途二：将安卓短信推送到 iPhone
+
+此用途需要 Root。自动配置当前只适配 SmsForwarder 3.5.0 数据库版本 21。
 
 1. 打开“首次配置 / 一键启用 / 权限修复”，允许 Magisk Root 授权。
 2. 点击“安装 / 打开内置短信转发器”，在官方应用中完成首次使用确认。
