@@ -1,8 +1,10 @@
 # 短信推送助手 / SmsForwarder Assistant · Bark-Android
 
+1.3.3 修正完整检查结束后计时子进程仍可能持有检查锁的问题；监护与 Bark 引擎首次退出立即重建，独立短信转发器进程退出时优先请求前台服务恢复。保持每秒轻量检查、手动关闭、首次解锁、检查互斥及重复故障退避。[行为与验证](docs/RELIABILITY.md)。
+
 **中文** | [English](README.en.md) · [v1.3 Release](https://github.com/1Fann/SmsForwarder-assistant/releases/tag/v1.3) · [MIT](LICENSE)
 
-**安卓 Bark 服务端与短信推送助手。** 支持将 Bark 服务端部署在 ARM64 安卓手机上，既可以独立用作 Bark 推送服务器，也可以配合 [SmsForwarder](https://github.com/pppscn/SmsForwarder)，把安卓收到的短信推送到 iPhone。当前版本 **1.3**，原名“Bark 本机服务器”。
+**安卓 Bark 服务端与短信推送助手。** 支持将 Bark 服务端部署在 ARM64 安卓手机上，既可以独立用作 Bark 推送服务器，也可以配合 [SmsForwarder](https://github.com/pppscn/SmsForwarder)，把安卓收到的短信推送到 iPhone。当前版本 **1.3.3**，原名“Bark 本机服务器”。
 
 **只想在安卓手机上自建 Bark 服务端，也可以使用本项目，无需安装或启用短信转发器。** 短信转发是可选用途，不是运行 Bark 服务的前提。
 
@@ -16,6 +18,8 @@
 本项目是独立的社区助手，不是 SmsForwarder 或 Bark 官方客户端。助手代码采用 [MIT](LICENSE)，第三方组件保留原许可证，见 [NOTICE.md](NOTICE.md)。
 
 ## 功能
+
+本地维护版本 **1.3.1** 新增检测进程退出后的自动恢复、系统查询超时、失败退避及手动停止保护。[可靠性改动与测试](docs/RELIABILITY.md)。上方 v1.3 链接仍指向已发布版本。
 
 - 在安卓手机上独立运行 Bark 服务端，支持启动、停止、查看配对地址和发送测试提醒。
 - iPhone 配对信息由当前设备生成，无预置个人域名、固定 IP 或手机配对密钥。

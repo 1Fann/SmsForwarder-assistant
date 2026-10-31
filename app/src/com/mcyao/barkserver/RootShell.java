@@ -6,9 +6,10 @@ final class RootShell {
  static Result run(String script) throws Exception {
   if(suPrefix==null){
    java.lang.Process help=new ProcessBuilder("su","--help").redirectErrorStream(true).start();
+   if(!help.waitFor(5,TimeUnit.SECONDS)){help.destroyForcibly();throw new IOException("Root 环境检查超时，请稍后重试");}
    ByteArrayOutputStream hb=new ByteArrayOutputStream();byte[] block=new byte[2048];int count;
    while((count=help.getInputStream().read(block))!=-1)hb.write(block,0,count);
-   help.waitFor(5,TimeUnit.SECONDS);String usage=hb.toString("UTF-8");
+   String usage=hb.toString("UTF-8");
    // Android isolates app data mounts. Use the root implementation's documented global namespace option.
    suPrefix=usage.contains("--target")?new String[]{"su","-t","0"}:usage.contains("--mount-master")?new String[]{"su","--mount-master"}:new String[]{"su"};
   }
