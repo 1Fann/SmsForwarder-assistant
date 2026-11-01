@@ -94,3 +94,19 @@ The unattended reboot phase measurements and final installed artifact hashes are
 
 数值为本机含探测开销的首次观测，不是普适上限。守护与业务分别连续抽样确认至少 1 秒和 3 秒。电话就绪检查含网关状态及匹配的 PBX 注册记录；本次未拨打真实电话、发送短信或通知，也未验证外网送达或双向通话音频。
 <!-- recovery-target-20261031:end -->
+
+## 2026-11-01 — 1.3.4 实机接管验证 / Device takeover validation
+
+最终 1.3.4 APK（SHA-256 `f1c91bef7e8f64aa1229cf739b8a56dcd7b5cc4a3dac8ad47fa355c87c208aab`）使用原签名覆盖安装。设备上的 `monitor.sh`、`monitor-boot.sh`、`monitor-update.sh` 与安装包一致。
+
+通过非导出服务的 `ENABLE_RELIABLE_SMS` 操作启用自有短信对账后，实机状态为 `migration_status=enabled`、`enabled=true`、`migration_review_required=false`；READ_SMS 已授予。`delivery-status` 返回 `pending=0`、`retrying=0`、`blocked=0`。这确认了接管、读取权限和本机队列状态接口，空队列本身不构成实际短信送达或 APNs 端到端验证。
+
+终止守护工作进程后，一次实测首次观测恢复耗时 0.61 秒。后续在黑屏、插电状态下，终止 Bark 业务进程后，本机 HTTP 与前台服务首次齐备为 1.64 秒；终止旧短信转发器进程后，前台服务与权限首次齐备为 3.22 秒，随后均稳定观察 3 秒。这些数值包含观测开销，分别为本机单次样本，不是保证上限；3.22 秒不能表述为严格 3 秒内恢复。此阶段未主动发送真实短信或通知，也未验证 APNs 实际到达。
+
+随后完成整机重启验证。所有时间从同一次重启请求起算，包含系统启动及观测开销：系统完成启动 37.53 秒，Bark 本机 ping 就绪 44.39 秒，短信转发器前台与权限就绪 44.83 秒，全套服务首次就绪 62.06 秒，66.08 秒稳定确认。红米的 `deviceSecure=false`；观察者未输入解锁、未启动 Activity 或发送服务启动命令。这些是本机就绪结果，不证明 APNs 实际送达，也不能推广为带安全锁屏凭据的手机重启后无需首次解锁。原始记录为 `reliability-20261031/private/full-retest-20261101-084900/reboot.json`。
+
+The final production-signed 1.3.4 APK, SHA-256 `f1c91bef7e8f64aa1229cf739b8a56dcd7b5cc4a3dac8ad47fa355c87c208aab`, was installed over the existing app. All three deployed monitor scripts matched the APK.
+
+After invoking the non-exported service's `ENABLE_RELIABLE_SMS` operation, the device reported `migration_status=enabled`, `enabled=true`, and `migration_review_required=false`. READ_SMS was granted. The delivery-status endpoint reported zero pending, retrying, and blocked records. This confirms takeover, permission, and the local queue-status interface; an empty queue does not verify real SMS delivery or the complete APNs path.
+
+One checker-process kill test first observed recovery after 0.61 seconds. Subsequent tests kept the phone plugged in and screen-off. After killing the Bark business process, local HTTP and foreground readiness were first observed after 1.64 seconds. After killing the existing SmsForwarder process, foreground and permission readiness were first observed after 3.22 seconds. Each business-process test then remained ready during three seconds of observation. These are individual samples including observation overhead, not upper bounds; 3.22 seconds does not meet a strict three-second limit. No real SMS or notification was deliberately sent and actual APNs arrival was not verified. Full-device reboot validation then completed. All timings start at the same reboot request and include operating-system startup and observation overhead: system boot completed at 37.53 seconds, Bark local ping was ready at 44.39 seconds, SmsForwarder foreground and permission readiness at 44.83 seconds, all services first ready at 62.06 seconds, and stable readiness confirmed at 66.08 seconds. The Redmi reported `deviceSecure=false`. The observer entered no unlock input and issued no Activity or service-start commands. These are local-readiness results, not proof of actual APNs delivery, and do not establish pre-first-unlock operation on a phone protected by secure lock-screen credentials. The raw record is `reliability-20261031/private/full-retest-20261101-084900/reboot.json`.

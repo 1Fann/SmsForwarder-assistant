@@ -6,7 +6,7 @@ import java.io.*;
 import java.util.UUID;
 
 public class BarkService extends Service {
- private volatile boolean active; private java.lang.Process child; private PowerManager.WakeLock wake;
+ private volatile boolean active; private java.lang.Process child; private PowerManager.WakeLock wake; private ReliableSmsSync smsSync;
  static String prefix(Context c) {
   android.content.SharedPreferences p=c.getSharedPreferences("server",0);
   String s=p.getString("prefix",null);
@@ -30,6 +30,7 @@ public class BarkService extends Service {
   if(active&&backoff>0)try{Thread.sleep(backoff);}catch(InterruptedException ignored){Thread.currentThread().interrupt();break;}
   backoff=backoff==0?1000:Math.min(60000,backoff*2);
   }},"bark-supervisor").start();
+  smsSync=new ReliableSmsSync(this);smsSync.start();
  }
  private void showForeground(){
   NotificationManager nm=getSystemService(NotificationManager.class);
@@ -41,8 +42,14 @@ public class BarkService extends Service {
   // Check desired state before spawning the engine or acquiring the wake lock.
   // A sticky restart has no intent and must also respect an explicit user stop.
   if((i==null||i.getBooleanExtra("monitor_recovery",false))&&!getSharedPreferences("server",0).getBoolean("enabled",false)){stopSelf();return START_NOT_STICKY;}
-  showForeground();getSharedPreferences("server",0).edit().putBoolean("enabled",true).commit();startWorker();return START_STICKY;
+  showForeground();getSharedPreferences("server",0).edit().putBoolean("enabled",true).commit();startWorker();
+  if(i!=null&&"RESET_RELIABLE_SMS".equals(i.getStringExtra("action"))&&i.getBooleanExtra("include_existing",false))try{ReliableSmsSync.reconcileRebuiltInbox(this);}catch(RuntimeException ignored){}
+  if((i!=null&&"ENABLE_RELIABLE_SMS".equals(i.getStringExtra("action")))||(ReliableSmsSync.prefs(this).getBoolean("migration_requested",false)&&!ReliableSmsSync.prefs(this).getBoolean("enabled",false)))new Thread(()->{
+   try{ReliableSmsSync.enableWithRoot(this);ReliableSmsSync.prefs(this).edit().putString("migration_status","enabled").commit();}
+   catch(Exception e){ReliableSmsSync.prefs(this).edit().putString("migration_status","failed; retry preserves the original sync position").commit();}
+  },"sms-reliable-setup").start();
+  return START_STICKY;
  }
- public synchronized void onDestroy(){active=false;if(child!=null)child.destroy();if(wake!=null&&wake.isHeld())wake.release();super.onDestroy();}
+ public synchronized void onDestroy(){active=false;if(smsSync!=null)smsSync.stop();if(child!=null)child.destroy();if(wake!=null&&wake.isHeld())wake.release();super.onDestroy();}
  public IBinder onBind(Intent i){return null;}
 }

@@ -9,7 +9,7 @@ New-Item -ItemType Directory -Force "$b/classes","$b/dex","$b/assets",$out | Out
 Copy-Item "$PSScriptRoot/../upstream/bark-server-2.3.9/LICENSE" "$b/assets/LICENSE.bark-server"
 Copy-Item "$PSScriptRoot/../third_party/LICENSE.SmsForwarder" "$b/assets/LICENSE.SmsForwarder"
 Copy-Item "$PSScriptRoot/../SmsForwarder-official.apk" "$b/assets/SmsForwarder-official.apk"
-foreach($name in @('monitor.sh','monitor-boot.sh')) {
+foreach($name in @('monitor.sh','monitor-boot.sh','monitor-update.sh')) {
  $content=[IO.File]::ReadAllText("$PSScriptRoot/assets/$name").Replace("`r`n","`n")
  [IO.File]::WriteAllText("$b/assets/$name",$content,[Text.UTF8Encoding]::new($false))
 }

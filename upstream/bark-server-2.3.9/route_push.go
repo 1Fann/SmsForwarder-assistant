@@ -205,7 +205,7 @@ func extractUrlPathParams(c *fiber.Ctx) (map[string]interface{}, error) {
 	return params, nil
 }
 
-func push(params map[string]interface{}) (int, error) {
+func deliverPush(params map[string]interface{}) (int, error) {
 	// default value
 	msg := apns.PushMessage{
 		Body:      "",

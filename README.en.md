@@ -1,12 +1,14 @@
 # SmsForwarder Assistant · Bark-Android / 短信推送助手
 
+Version 1.3.4 adds a durable notification queue, opt-in SMS provider reconciliation, and monitor-update rollback. Enable provider reconciliation in setup step 4. See the [bilingual release notes](docs/releases/v1.3.4.md).
+
 Version 1.3.3 prevents timeout helpers from retaining the check lock after a completed check. First checker/engine exits recover promptly, and a detected SmsForwarder exit requests its wanted foreground service before unrelated Bark and permission checks. One-second lightweight polling, manual disable, first-unlock checks, mutual exclusion and repeated-failure backoff remain in effect. See [behavior and validation](docs/RELIABILITY.md).
 
-Maintenance versions retain checker supervision, bounded framework queries, recovery backoff and explicit-stop protection. See [reliability changes and tests](docs/RELIABILITY.md). The v1.3 links below refer to the earlier release.
+Maintenance versions retain checker supervision, bounded framework queries, recovery backoff and explicit-stop protection. See [reliability changes and tests](docs/RELIABILITY.md). The links below refer to the 1.3.4 source release.
 
-[中文](README.md) | **English** · [v1.3 Release](https://github.com/1Fann/SmsForwarder-assistant/releases/tag/v1.3) · [MIT](LICENSE)
+[中文](README.md) | **English** · [v1.3.4 Release](https://github.com/1Fann/SmsForwarder-assistant/releases/tag/v1.3.4) · [MIT](LICENSE)
 
-**A Bark server for Android, with optional SMS forwarding to iPhone.** Deploy the Bark server on an ARM64 Android phone and use it as a standalone push server, or pair it with [SmsForwarder](https://github.com/pppscn/SmsForwarder) to forward incoming SMS notifications to your iPhone. Current version: **1.3.3**, previously named “Bark Local Server”.
+**A Bark server for Android, with optional SMS forwarding to iPhone.** Deploy the Bark server on an ARM64 Android phone and use it as a standalone push server, or pair it with [SmsForwarder](https://github.com/pppscn/SmsForwarder) to forward incoming SMS notifications to your iPhone. Current version: **1.3.4**, previously named “Bark Local Server”.
 
 **You can use this project solely to host a Bark server on Android. Installing or enabling SmsForwarder is not required.** SMS forwarding is an optional use case, not a prerequisite for running Bark.
 
@@ -15,7 +17,7 @@ Maintenance versions retain checker supervision, bounded framework queries, reco
 | Host a Bark server on Android | Start the local Bark server, register your iPhone, and provide a push endpoint for applications or scripts that can reach it |
 | Forward Android SMS to iPhone | Enable SmsForwarder alongside the local Bark server and configure SMS rules, permission repairs, and retries |
 
-[Read the v1.3 release notes](https://github.com/1Fann/SmsForwarder-assistant/releases/tag/v1.3). This release provides source code only; no APK is attached.
+[Read the v1.3.4 release notes](https://github.com/1Fann/SmsForwarder-assistant/releases/tag/v1.3.4). This release provides source code only; no APK is attached.
 
 This is an independent community assistant, not an official SmsForwarder or Bark client. The assistant is licensed under [MIT](LICENSE). Third-party components retain their original licenses; see [NOTICE.md](NOTICE.md).
 

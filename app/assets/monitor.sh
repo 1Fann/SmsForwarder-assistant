@@ -79,6 +79,11 @@ background() {
 check_bark() {
  wanted || { BSTATUS='Bark 已手动停止'; return; }
  background "$SELF"
+ if grep -q '<boolean name="enabled" value="true"' "/data/user/0/$SELF/shared_prefs/reliable_sms.xml" 2>/dev/null; then
+  pm grant "$SELF" android.permission.READ_SMS >/dev/null 2>&1
+  cmd appops set --uid "$SELF" READ_SMS allow >/dev/null 2>&1
+  cmd appops set "$SELF" READ_SMS allow >/dev/null 2>&1
+ fi
  if foreground && healthy; then rm -f "$BASE/bark.retry"; BSTATUS='Bark 服务正常'; return; fi
  retry_ready bark || { BSTATUS='Bark 恢复冷却中，将自动重试'; return; }
  sleep 1 8>&- 9>&-

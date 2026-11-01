@@ -18,6 +18,9 @@ public class SetupActivity extends Activity {
   button(l,"2. 启动 Bark，查看 iPhone 配对地址",()->{startForegroundService(new Intent(this,BarkService.class));startActivity(new Intent(this,MainActivity.class));});
   text(l,"iPhone 与安卓连接同一 Wi-Fi，在 iPhone Bark 中添加首页显示的服务器地址。每次全新安装都会生成独立地址。",15);
   button(l,"3. 一键启用全部短信转发（Root）",()->work(3));
+  button(l,"4. 启用可靠短信投递（Root）",()->work(4));
+  button(l,"短信编号回退：重新对账当前收件箱",()->new AlertDialog.Builder(this).setTitle("重新对账当前收件箱？").setMessage("仅用于短信数据库重建或编号回退后的恢复。会重新投递当前收件箱的所有短信，可能重复提醒；已进入队列的通知继续保留。").setNegativeButton("取消",null).setPositiveButton("重新对账",(d,w)->{try{ReliableSmsSync.reconcileRebuiltInbox(this);status.setText("已保存新的同步位置，将重新对账当前收件箱");}catch(Exception e){status.setText(e.getMessage());}}).show());
+  text(l,"从本次启用起，助手按系统短信编号对账并持久保存待投递通知，断网和进程重启后继续发送；不会推送启用前的短信。仅停用本助手创建的全部短信规则，其它规则保留。切换时第三方在途请求仍可能重复，请在空闲时启用。",15);
   text(l,"自动创建或更新本机 Bark 通道和全部 SIM 的短信规则，开启短信转发，修复权限并设置失败重试。保留已有其它通道和规则；已有规则仍可能同时发送。",15);
   status=new TextView(this);status.setTextIsSelectable(true);l.addView(status);
   button(l,"检查当前配置（Root）",()->work(false));
@@ -63,7 +66,7 @@ public class SetupActivity extends Activity {
   new Thread(()->{String result;try{
    Result auth=root("id -u");if(auth.code!=0||!auth.out.trim().equals("0"))throw new IOException("未获得 Root 权限。请使用下方系统设置入口，或在 Magisk 中授权后重试。");
    if(operation==2)result=prepare();
-   else {getPackageManager().getPackageInfo(SMS,0);result=operation==3?provision():operation==1?repair():"当前配置：\n";result+="\n"+inspect();}
+   else {getPackageManager().getPackageInfo(SMS,0);result=operation==4?enableReliable():operation==3?provision():operation==1?repair():"当前配置：\n";result+="\n"+inspect();}
   }catch(Exception e){result="未完成："+e.getMessage()+"\n请使用下方系统设置入口检查。";}
   final String report=result;getSharedPreferences("setup",0).edit().putString("lastReport",report).apply();handler.post(()->{if(isDestroyed())return;busy=false;for(Button b:actions)b.setEnabled(true);status.setText(report);});
   }).start();
@@ -88,6 +91,7 @@ public class SetupActivity extends Activity {
   return "短信转发器已准备好。请完成它的首次使用确认，然后回到 Bark 绑定 iPhone，最后点击第 3 步。";
  }
  String provision()throws Exception{
+  if(ReliableSmsSync.prefs(this).getBoolean("enabled",false))return "可靠短信投递已启用，保留助手对账通道，不重复启用第三方规则。";
   if(android.os.Process.myUid()/100000!=0)throw new IOException("首次配置目前仅支持手机主用户");
   File keyFile=new File(getFilesDir(),"device-key");
   if(!keyFile.isFile())throw new IOException("请先完成第 2 步：在 iPhone Bark 添加此服务器");
@@ -114,6 +118,11 @@ public class SetupActivity extends Activity {
    Result applied=root(cmd);if(applied.code!=0||!applied.out.contains("PROVISION_OK"))throw new IOException("启用未完成，已保存原配置备份。请检查短信转发器版本是否为 3.5.0");
   }finally{cfg.delete();stage.delete();root("am start -W -n "+SMS+"/.activity.MainActivity\nam start -W -n "+SELF+"/.SetupActivity -f 0x20000");}
   return "全部短信转发已启用：所有号码、全部 SIM → 当前绑定 iPhone。\n通道和规则已保存，可重复点击更新绑定，不会重复创建本应用的规则。请发一条真实短信验证。\n";
+ }
+ String enableReliable()throws Exception{
+  ReliableSmsSync.enableWithRoot(this);
+  startForegroundService(new Intent(this,BarkService.class));
+  return "可靠短信投递已启用。之后的新短信按系统编号补齐，断网时保存在本机队列，恢复网络后继续投递。";
  }
  String repair() throws Exception {
   PackageInfo pi=getPackageManager().getPackageInfo(SMS,0);

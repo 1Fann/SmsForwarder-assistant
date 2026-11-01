@@ -5,7 +5,9 @@ BB=
 for b in /data/adb/magisk/busybox /data/adb/ksu/bin/busybox /data/adb/ap/bin/busybox; do
  [ -x "$b" ] && { BB=$b; break; }
 done
-[ -n "$BB" ] && [ -f "$BASE/.owned" ] && [ -f "$BASE/enabled" ] || exit 0
+[ -n "$BB" ] && [ -f "$BASE/.owned" ] || exit 0
+if [ -f "$BASE/monitor-update.sh" ]; then "$BB" ash "$BASE/monitor-update.sh" recover || exit 0; fi
+[ -f "$BASE/enabled" ] || exit 0
 case "${1:-}" in
  --acquire|--worker) exec "$BB" ash "$0" --ash-worker;;
  --ash-worker) ;;

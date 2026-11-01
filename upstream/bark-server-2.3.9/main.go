@@ -50,6 +50,9 @@ func runServer(c *cli.Context) error {
 	fiberApp := createFiberApp(c, network)
 	setupRouter(c, fiberApp)
 	initializeDatabase(c)
+	if err := initializeAndroidQueue(); err != nil {
+		return err
+	}
 	setupGracefulShutdown(fiberApp)
 	return startServer(c, fiberApp, network)
 }
