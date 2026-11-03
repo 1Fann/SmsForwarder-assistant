@@ -12,6 +12,18 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
+func TestMalformedOptionalGroupDoesNotPoisonDelivery(t *testing.T) {
+	for _, group := range []interface{}{nil, 123.0, false, []string{"broken"}, "allowed"} {
+		extra := map[string]interface{}{"group": group, "other": "keep"}
+		normalizeThreadGroup(extra)
+		got, exists := extra["group"]
+		_, valid := group.(string)
+		if exists != valid || (valid && got != "allowed") || extra["other"] != "keep" {
+			t.Fatal("unexpected thread group normalization")
+		}
+	}
+}
+
 // Run with the production .go files plus this test, excluding upstream's live
 // APNs push_test.go. All sends here use an injected local callback.
 func TestProviderIngressDurability(t *testing.T) {

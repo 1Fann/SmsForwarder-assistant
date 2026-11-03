@@ -205,6 +205,14 @@ func extractUrlPathParams(c *fiber.Ctx) (map[string]interface{}, error) {
 	return params, nil
 }
 
+// APNs expects a text thread identifier. An old queued item with a malformed
+// optional group must not panic the engine and replay the same crash at boot.
+func normalizeThreadGroup(params map[string]interface{}) {
+	if _, ok := params["group"].(string); !ok {
+		delete(params, "group")
+	}
+}
+
 func deliverPush(params map[string]interface{}) (int, error) {
 	// default value
 	msg := apns.PushMessage{
@@ -262,6 +270,7 @@ func deliverPush(params map[string]interface{}) (int, error) {
 	}
 
 	msg.DeviceToken = deviceToken
+	normalizeThreadGroup(msg.ExtParams)
 
 	code, err := apns.Push(&msg)
 
@@ -270,7 +279,10 @@ func deliverPush(params map[string]interface{}) (int, error) {
 		_, _ = db.SaveDeviceTokenByKey(msg.DeviceKey, "")
 	}
 	if err != nil {
-		return 500, fmt.Errorf("push failed: %v", err)
+		if androidQueue == nil {
+			code = 500
+		} // Preserve the upstream synchronous HTTP response.
+		return code, fmt.Errorf("push failed: %w", err)
 	}
 	return 200, nil
 }

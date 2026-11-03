@@ -2,11 +2,63 @@ package reliable
 
 import (
 	"errors"
+	"fmt"
 	bolt "go.etcd.io/bbolt"
 	"path/filepath"
+	"syscall"
 	"testing"
 	"time"
 )
+
+func TestRestoredNetworkAdvancesOnlyTransportFailures(t *testing.T) {
+	for _, test := range []struct {
+		name  string
+		code  int
+		cause error
+		early bool
+	}{
+		{"offline", 500, fmt.Errorf("send: %w", syscall.ENETUNREACH), true},
+		{"rate-limit", 429, errors.New("rate limited"), false},
+		{"provider", 503, errors.New("unavailable"), false},
+		{"permanent", 400, errors.New("invalid token"), false},
+		{"tls", 500, errors.New("certificate rejected"), false},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), "queue.db")
+			q := openTest(t, path)
+			now := time.Unix(10000, 0)
+			id, err := q.Submit([]byte(`{"body":"fixture"}`), now)
+			if err != nil {
+				t.Fatal(err)
+			}
+			q.Step(now, func(Item) (int, error) { return test.code, test.cause })
+			q.Close()
+			q = openTest(t, path)
+			defer q.Close()
+			for i := 0; i < 2; i++ {
+				if err = q.NetworkRestored(now.Add(time.Second)); err != nil {
+					t.Fatal(err)
+				}
+			}
+			count := 0
+			send := func(item Item) (int, error) {
+				count++
+				if item.ID != id {
+					t.Fatal("identity changed")
+				}
+				return 200, nil
+			}
+			ok, err := q.Step(now.Add(time.Second), send)
+			if err != nil || ok != test.early {
+				t.Fatal(ok, err)
+			}
+			q.Step(now.Add(10*time.Second), send)
+			if count != 1 {
+				t.Fatal("expected one delivery", count)
+			}
+		})
+	}
+}
 
 func openTest(t *testing.T, path string) *Queue {
 	t.Helper()

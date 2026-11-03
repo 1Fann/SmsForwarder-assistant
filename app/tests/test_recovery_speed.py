@@ -17,7 +17,7 @@ ASSETS = Path(__file__).resolve().parents[1] / "assets"
 
 @unittest.skipUnless(SHELL, "POSIX shell required")
 class RecoverySpeedTest(unittest.TestCase):
-    def fixture(self, scenario, boot=False):
+    def fixture(self, scenario, boot=False, target="sms"):
         with tempfile.TemporaryDirectory(prefix="bark-speed-") as temporary:
             base = Path(temporary)
             commands = base / "bin"
@@ -27,11 +27,13 @@ class RecoverySpeedTest(unittest.TestCase):
             if scenario == "disabled":
                 (base / "enabled").unlink()
             (base / "sms.xml").write_text('<boolean name="enable_sms" value="%s" />\n' % ("false" if scenario == "off" else "true") + ('<boolean name="enable_pure_client_mode" value="true" />' if scenario == "client" else ""))
+            (base / "bark.xml").write_text('<boolean name="enabled" value="%s" />\n' % ("false" if scenario == "off" else "true"))
             if scenario == "cooldown":
-                (base / "sms.retry").write_text("fixture-boot 160 1\n", newline="\n")
+                (base / (target + ".retry")).write_text("fixture-boot 160 1\n", newline="\n")
             monitor = (ASSETS / "monitor.sh").read_text(encoding="utf-8")
             monitor = monitor.replace("BASE=/data/adb/sms-push-assistant", 'BASE="$FIXTURE"')
             monitor = monitor.replace("SMSPREF=/data/user_de/0/$SMS/shared_prefs/$SMS.xml", 'SMSPREF="$FIXTURE/sms.xml"')
+            monitor = monitor.replace("PREF=/data/user/0/$SELF/shared_prefs/server.xml", 'PREF="$FIXTURE/bark.xml"')
             begin = monitor.index("BB=\n")
             end = monitor.index('[ -n "$BB" ]', begin)
             monitor = monitor[:begin] + 'BB="$FIXTURE/bin/busybox"\n' + monitor[end:]
@@ -58,7 +60,7 @@ class RecoverySpeedTest(unittest.TestCase):
                 "cmd": 'echo cmd >> "$FIXTURE/events"; [ "$SCENARIO" = bootlocked ] && echo RUNNING_LOCKED || echo RUNNING_UNLOCKED',
                 "dumpsys": '''echo dumpsys >> "$FIXTURE/events"
                     [ "$SCENARIO" != alive ] || echo isForeground=true
-                    if [ "$SCENARIO" = stopped_during_check ]; then printf '<boolean name="enable_sms" value="false" />' > "$FIXTURE/sms.xml"; fi''',
+                    if [ "$SCENARIO" = stopped_during_check ]; then printf '<boolean name="enable_sms" value="false" />' > "$FIXTURE/sms.xml"; printf '<boolean name="enabled" value="false" />' > "$FIXTURE/bark.xml"; fi''',
                 "pm": 'echo forbidden-pm >> "$FIXTURE/events"; exit 90',
                 "am": 'echo start >> "$FIXTURE/events"; exit 0',
                 "sleep": 'echo "$1" >> "$FIXTURE/sleeps"',
@@ -83,12 +85,12 @@ n=$((n+1)); echo "$n" > "$FIXTURE/count"
 exit 7
 ''', encoding="utf-8", newline="\n")
             for name, source in mocks.items():
-                target = commands / name
-                target.write_text("#!/bin/sh\n" + source + "\n", encoding="utf-8", newline="\n")
-                target.chmod(0o755)
+                mock = commands / name
+                mock.write_text("#!/bin/sh\n" + source + "\n", encoding="utf-8", newline="\n")
+                mock.chmod(0o755)
             env = dict(os.environ, FIXTURE=base.as_posix(), TEST_SHELL=Path(SHELL).as_posix(), SCENARIO=scenario)
             env["PATH"] = str(commands) + os.pathsep + str(Path(SHELL).parent) + os.pathsep + env.get("PATH", "")
-            result = subprocess.run([SHELL, str(base / ("boot.sh" if boot else "monitor.sh")), "--ash-worker" if boot else "fast-sms"], env=env, capture_output=True, text=True, timeout=10)
+            result = subprocess.run([SHELL, str(base / ("boot.sh" if boot else "monitor.sh")), "--ash-worker" if boot else "fast-" + target], env=env, capture_output=True, text=True, timeout=10)
             self.assertEqual(1 if scenario == "locked" else 0, result.returncode, result.stderr)
             events = (base / "events").read_text().splitlines() if (base / "events").exists() else []
             sleeps = (base / "sleeps").read_text().splitlines() if (base / "sleeps").exists() else []
@@ -114,6 +116,12 @@ exit 7
         for scenario in ["alive", "cooldown", "locked"]:
             with self.subTest(scenario=scenario):
                 self.assertNotIn("start", self.fixture(scenario)[0])
+
+    def test_bark_fast_path(self):
+        self.assertIn("start", self.fixture("missing", target="bark")[0])
+        for scenario in ["disabled", "off", "bootlocked", "stopped_during_check", "alive", "cooldown", "locked"]:
+            with self.subTest(scenario=scenario):
+                self.assertNotIn("start", self.fixture(scenario, target="bark")[0])
 
     def test_worker_first_exit_is_immediate_then_bounded_backoff(self):
         self.assertEqual(["1", "2", "4", "8", "16", "30", "30", "30"], self.fixture("crash", boot=True)[1])

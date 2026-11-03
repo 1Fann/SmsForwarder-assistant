@@ -1,12 +1,14 @@
 # 短信推送助手 / SmsForwarder Assistant · Bark-Android
 
+1.3.5 在网络恢复时提前重试因连接失败而积压的通知，并加快 Bark 主进程退出后的恢复。[中英文说明](docs/releases/v1.3.5.md)。
+
 1.3.4 新增持久通知队列、按系统短信编号对账的可靠投递模式，以及守护更新失败回滚。需要在首次配置页完成第 4 步启用短信对账。详见[中英文更新说明](docs/releases/v1.3.4.md)。
 
 1.3.3 修正完整检查结束后计时子进程仍可能持有检查锁的问题；监护与 Bark 引擎首次退出立即重建，独立短信转发器进程退出时优先请求前台服务恢复。保持每秒轻量检查、手动关闭、首次解锁、检查互斥及重复故障退避。[行为与验证](docs/RELIABILITY.md)。
 
-**中文** | [English](README.en.md) · [v1.3.4 Release](https://github.com/1Fann/SmsForwarder-assistant/releases/tag/v1.3.4) · [MIT](LICENSE)
+**中文** | [English](README.en.md) · [v1.3.5 Release](https://github.com/1Fann/SmsForwarder-assistant/releases/tag/v1.3.5) · [MIT](LICENSE)
 
-**安卓 Bark 服务端与短信推送助手。** 支持将 Bark 服务端部署在 ARM64 安卓手机上，既可以独立用作 Bark 推送服务器，也可以配合 [SmsForwarder](https://github.com/pppscn/SmsForwarder)，把安卓收到的短信推送到 iPhone。当前版本 **1.3.4**，原名“Bark 本机服务器”。
+**安卓 Bark 服务端与短信推送助手。** 支持将 Bark 服务端部署在 ARM64 安卓手机上，既可以独立用作 Bark 推送服务器，也可以配合 [SmsForwarder](https://github.com/pppscn/SmsForwarder)，把安卓收到的短信推送到 iPhone。当前版本 **1.3.5**，原名“Bark 本机服务器”。
 
 **只想在安卓手机上自建 Bark 服务端，也可以使用本项目，无需安装或启用短信转发器。** 短信转发是可选用途，不是运行 Bark 服务的前提。
 

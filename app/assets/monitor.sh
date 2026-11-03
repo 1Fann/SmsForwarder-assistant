@@ -21,11 +21,11 @@ case "${1:-loop}" in
  # Start the deadline before opening the check lock: BusyBox timeout's timer
  # can outlive its command and must never inherit the check's locked descriptor.
  once) exec "$BB" timeout 40 "$BB" ash "$BASE/monitor.sh" --acquire-check 8>&- 9>&-;;
- fast-sms) exec "$BB" timeout 20 "$BB" ash "$BASE/monitor.sh" --acquire-fast-sms 8>&- 9>&-;;
- --acquire-check|--acquire-fast-sms)
+ fast-sms|fast-bark) exec "$BB" timeout 20 "$BB" ash "$BASE/monitor.sh" "--acquire-$1" 8>&- 9>&-;;
+ --acquire-check|--acquire-fast-sms|--acquire-fast-bark)
   exec 8>"$BASE/check.lock"
   "$BB" flock -n 8 || exit 1
-  if [ "$1" = --acquire-check ]; then set -- --check; else set -- --fast-sms; fi;;
+  set -- "--${1#--acquire-}";;
  --loop) ;;
  *) exit 2;;
 esac
@@ -135,6 +135,17 @@ check_sms() {
   SSTATUS='短信转发器需要手动检查权限或后台设置'
  elif [ "$fixed" = 1 ]; then rm -f "$BASE/sms.retry"; SSTATUS='短信转发器已自动恢复'; else rm -f "$BASE/sms.retry"; SSTATUS='短信转发器服务与接收权限正常'; fi
 }
+if [ "$1" = --fast-bark ]; then
+ # A verified main process just disappeared. Starting the wanted foreground
+ # service also starts its engine; keep slow checks and repairs off this path.
+ enabled && wanted && ready || exit 0
+ foreground && exit 0
+ retry_ready bark || exit 0
+ enabled && wanted || exit 0
+ retry_attempt bark
+ am start-foreground-service -n "$SELF/.BarkService" --ez monitor_recovery true >/dev/null 2>&1
+ exit 0
+fi
 if [ "$1" = --fast-sms ]; then
  # Only a cached PID death enters here. Restore the wanted service before the
  # unrelated Bark/TLS and permission checks; the same exclusion/backoff applies.
@@ -179,7 +190,10 @@ while enabled; do
   LEFT=$((LEFT - 1)); TICK=$((TICK + 1))
   if [ -n "$BARK_PID" ] && ! kill -0 "$BARK_PID" 2>/dev/null; then
    BARK_PID=
-   wanted 9>&- && break
+   if wanted 9>&-; then
+    /system/bin/sh "$BASE/monitor.sh" fast-bark 9>&-
+    break
+   fi
   fi
   if [ -n "$SMS_PID" ] && ! kill -0 "$SMS_PID" 2>/dev/null; then
    SMS_PID=

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"encoding/json"
 	"errors"
 	"os"
@@ -68,6 +69,19 @@ func initializeAndroidQueue() error {
 		return errors.New("cannot open durable notification queue")
 	}
 	androidQueue = q
+	go func() {
+		var last time.Time
+		scanner := bufio.NewScanner(os.Stdin)
+		for scanner.Scan() {
+			if scanner.Text() != "network-restored" || time.Since(last) < 30*time.Second {
+				continue
+			}
+			last = time.Now()
+			if err := q.NetworkRestored(last); err != nil {
+				logger.Error("could not expedite transport retries")
+			}
+		}
+	}()
 	go func() {
 		for {
 			for i := 0; i < 32; i++ {

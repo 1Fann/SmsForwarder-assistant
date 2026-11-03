@@ -2,11 +2,15 @@
 package reliable
 
 import (
+	"context"
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"io"
+	"net"
+	"syscall"
 	"time"
 
 	bolt "go.etcd.io/bbolt"
@@ -19,12 +23,13 @@ var quarantineBucket = []byte("quarantined")
 const MaxPending = 10000
 
 type Item struct {
-	ID       string
-	Payload  json.RawMessage
-	Created  int64
-	Next     int64
-	Attempts int
-	LastCode int
+	ID             string
+	Payload        json.RawMessage
+	Created        int64
+	Next           int64
+	Attempts       int
+	LastCode       int
+	NetworkFailure bool `json:",omitempty"`
 }
 type Status struct {
 	Pending  int   `json:"pending"`
@@ -149,6 +154,7 @@ func (q *Queue) Step(now time.Time, send func(Item) (int, error)) (bool, error) 
 		}
 		selected.Attempts++
 		selected.LastCode = code
+		selected.NetworkFailure = code == 500 && isNetworkFailure(sendErr)
 		delay := 5 * time.Second
 		for i := 1; i < selected.Attempts && delay < 300*time.Second; i++ {
 			delay *= 2
@@ -164,6 +170,54 @@ func (q *Queue) Step(now time.Time, send func(Item) (int, error)) (bool, error) 
 		return b.Put([]byte(selected.ID), data)
 	})
 	return true, err
+}
+
+func isNetworkFailure(err error) bool {
+	var n net.Error
+	if errors.As(err, &n) && n.Timeout() {
+		return true
+	}
+	for _, transient := range []error{context.DeadlineExceeded, io.EOF, io.ErrUnexpectedEOF, syscall.ENETUNREACH, syscall.EHOSTUNREACH, syscall.ENETDOWN, syscall.ECONNRESET, syscall.ECONNREFUSED, syscall.EPIPE} {
+		if errors.Is(err, transient) {
+			return true
+		}
+	}
+	return false
+}
+
+// A restored validated network can advance transport failures only. A single
+// database consumer still owns delivery. Existing and provider backoffs are preserved.
+func (q *Queue) NetworkRestored(now time.Time) error {
+	return q.db.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket(bucket)
+		var changed []Item
+		err := b.ForEach(func(k, v []byte) error {
+			var item Item
+			if json.Unmarshal(v, &item) != nil || item.ID != string(k) || !json.Valid(item.Payload) || !item.NetworkFailure {
+				return nil
+			}
+			when := now.Unix() + int64(len(changed))*2
+			if item.Next > when {
+				item.Next = when
+				item.NetworkFailure = false
+				changed = append(changed, item)
+			}
+			return nil
+		})
+		if err != nil {
+			return err
+		}
+		for _, item := range changed {
+			data, err := json.Marshal(item)
+			if err != nil {
+				return err
+			}
+			if err = b.Put([]byte(item.ID), data); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
 }
 func (q *Queue) Status() (Status, error) {
 	var s Status
